@@ -38,11 +38,14 @@ DRIVE_SEARCH_ROOTS = (
     Path("/content/drive/MyDrive/GitHub"),
 )
 
-# Swappable HF model — change this one line to switch later (e.g. Gemma)
-MODEL_NAME = "Qwen/Qwen2.5-32B"  # later: "Qwen/Qwen2.5-32B, Qwen/Qwen2.5-1.5B", "google/gemma-2-2b" / "google/gemma-2-9b"
+# Swappable model — HF id OR local path (RunPod ModelScope cache under /workspace)
+# Local 7B (ready): /workspace/models/models/Qwen--Qwen2.5-7B
+# Local 32B (when download finishes): /workspace/models/models/Qwen--Qwen2.5-32B
+# Hub examples: "Qwen/Qwen2.5-32B", "google/gemma-2-9b"
+MODEL_NAME = "/workspace/models/models/Qwen--Qwen2.5-7B"
 MODEL_DTYPE = "auto"  # "bfloat16" | "float16" | "float32" | "auto"
 MODEL_TRUST_REMOTE_CODE = True  # Qwen often needs this; Gemma usually False
-HF_TOKEN_ENV = "HF_TOKEN"  # optional gated models
+HF_TOKEN_ENV = "HF_TOKEN"  # optional gated models (not needed for local paths)
 
 USE_TINY_OFFLINE = False  # True → skip HF download, use TinyCausalLM / TinyDecoder demos
 INSTALL_WHEELS = True
