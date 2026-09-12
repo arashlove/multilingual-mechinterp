@@ -74,6 +74,17 @@ def mmcs(model: LearnedDict, model2: LearnedDict) -> float:
     return mmcs_to_fixed(model, model2.get_learned_dict())
 
 
+def _batch_on_model_device(model: LearnedDict, batch: torch.Tensor) -> torch.Tensor:
+    """Move ``batch`` onto the same device as ``model`` parameters when possible."""
+    if isinstance(model, torch.nn.Module):
+        try:
+            device = next(model.parameters()).device
+            return batch.to(device)
+        except StopIteration:
+            pass
+    return batch
+
+
 def evaluate_sae(
     model: LearnedDict,
     batch: torch.Tensor,
@@ -81,6 +92,7 @@ def evaluate_sae(
     dead_threshold: int = 10,
 ) -> dict[str, Any]:
     """Return FVU / L0 / dead-feature summary for logging and sweeps."""
+    batch = _batch_on_model_device(model, batch)
     fvu = fraction_variance_unexplained(model, batch)
     l0 = mean_l0(model, batch)
     dead = count_dead_features(model, batch, threshold=dead_threshold)

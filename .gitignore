@@ -52,6 +52,11 @@ huggingface/
 results/**/*
 !results/**/.gitkeep
 
+# Colab / Drive exports
+output/**/*
+!output/**/.gitkeep
+!output/.gitkeep
+
 # Processed data (keep directory structure via .gitkeep)
 data/processed/**/*
 !data/processed/**/.gitkeep

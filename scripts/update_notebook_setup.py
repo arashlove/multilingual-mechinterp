@@ -7,12 +7,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 NB_DIR = ROOT / "notebooks"
 
-SETUP_SOURCE = r'''# --- Colab / local bootstrap (Drive + wheels + swappable model) ---
-# Drive layout expected:
-#   MyDrive/multilingual-mechinterp/
-#     dist/*.whl
+SETUP_SOURCE = r'''# Drive layout expected:
+#   MyDrive/multilingual_mech/
 #     data/all200questions_persianMiddleEastCulture.json
-#     configs/  notebooks/  results/
+#     dist/*.whl   (wheel builds)
+#     configs/  notebooks/  output/
 #
 # Edit MODEL_NAME in notebooks/colab_setup.py (Qwen2.5 now; Gemma later),
 # or override below after bootstrap.
@@ -26,13 +25,13 @@ def _resolve_setup_script() -> Path:
         here / "colab_setup.py",
         here / "notebooks" / "colab_setup.py",
         here.parent / "notebooks" / "colab_setup.py",
-        Path("/content/drive/MyDrive/multilingual-mechinterp/notebooks/colab_setup.py"),
+        Path("/content/drive/MyDrive/multilingual_mech/notebooks/colab_setup.py"),
     ]
     for p in candidates:
         if p.exists():
             return p
     raise FileNotFoundError(
-        "colab_setup.py not found. Mount Drive with the project folder, "
+        "colab_setup.py not found. Mount Drive and use folder multilingual_mech/, "
         "or open the notebook from the repo."
     )
 
@@ -56,10 +55,11 @@ if "model" in cfg and not USE_TINY_OFFLINE:
     pass
 
 print("Ready.")
-print(" ROOT =", ROOT)
-print(" DATA =", DATA_DIR)
-print(" DIST =", DIST_DIR)
-print(" MODEL =", MODEL_NAME, "| tiny=", USE_TINY_OFFLINE)
+print(" ROOT   =", ROOT)
+print(" DATA   =", DATA_DIR)
+print(" DIST   =", DIST_DIR)
+print(" OUTPUT =", OUTPUT_DIR)  # Drive exports go here
+print(" MODEL  =", MODEL_NAME, "| tiny=", USE_TINY_OFFLINE)
 '''
 
 # Per-notebook extras appended after shared setup
@@ -68,7 +68,7 @@ EXTRAS = {
 from multilingual_mechinterp.metrics import evaluate_sae
 from multilingual_mechinterp.sae import TiedSAE, sweep_l1, train_tied_sae
 
-OUT = ensure_dir(RESULTS_DIR / "sae")
+OUT = ensure_dir(OUTPUT_DIR / "sae")
 sae_cfg = cfg.get("sae", {"ratio": 2, "alpha": 8.6e-4, "lr": 1e-3,
                           "alphas": [1e-4, 3e-4, 8.6e-4, 1.4e-3, 3e-3]})
 sae_cfg
@@ -76,7 +76,7 @@ sae_cfg
     "02_jlens.ipynb": '''
 from multilingual_mechinterp.jlens import TinyDecoder, fit, run_jlens, JacobianLens, from_hf
 
-OUT = ensure_dir(RESULTS_DIR / "jlens")
+OUT = ensure_dir(OUTPUT_DIR / "jlens")
 ''',
     "03_activation_patching.ipynb": '''
 from multilingual_mechinterp.patching import (
@@ -84,7 +84,7 @@ from multilingual_mechinterp.patching import (
 )
 from multilingual_mechinterp.data import culture_prompt_pairs, load_culture_questions
 
-OUT = ensure_dir(RESULTS_DIR / "patching")
+OUT = ensure_dir(OUTPUT_DIR / "patching")
 ''',
     "04_common_example.ipynb": '''
 from multilingual_mechinterp.data import culture_prompt_pairs, load_culture_questions
@@ -93,7 +93,7 @@ from multilingual_mechinterp.metrics import evaluate_sae
 from multilingual_mechinterp.patching import TinyCausalLM, recommend_layers, run_patching
 from multilingual_mechinterp.sae import train_tied_sae
 
-OUT = ensure_dir(RESULTS_DIR / "comparison")
+OUT = ensure_dir(OUTPUT_DIR / "comparison")
 ''',
     "05_compare_methods.ipynb": '''
 from multilingual_mechinterp.data import culture_prompt_pairs, load_culture_questions
@@ -103,7 +103,7 @@ from multilingual_mechinterp.patching import TinyCausalLM, recommend_layers, run
 from multilingual_mechinterp.sae import train_tied_sae
 from multilingual_mechinterp.utils import save_json
 
-OUT = ensure_dir(RESULTS_DIR / "comparison")
+OUT = ensure_dir(OUTPUT_DIR / "comparison")
 N_ITEMS = 5
 ''',
 }
@@ -119,10 +119,11 @@ LOAD_MODEL_CODE = '''# Real model (Qwen now; change MODEL_NAME for Gemma later) 
 # model = load_experiment_model()
 # For gated Gemma: export HF_TOKEN=... or pass token=...
 
-# Default path in analysis cells below uses tiny models for speed.
-# Swap in `model = load_experiment_model()` when you are ready for Qwen/Gemma.
+# Figures / JSON / checkpoints are written under OUTPUT_DIR on Drive:
+#   multilingual_mech/output/{sae,jlens,patching,comparison,...}
 print("To load HF weights:", f"load_experiment_model({MODEL_NAME!r})")
 print("Culture JSON:", culture_json_path(), "exists=", culture_json_path().exists())
+print("Exports go to:", OUTPUT_DIR)
 '''
 
 

@@ -164,7 +164,7 @@ def sweep_l1(
 
 def _as_tensor(activations: torch.Tensor | str | Path, *, device: str | torch.device) -> torch.Tensor:
     if isinstance(activations, torch.Tensor):
-        return activations.float()
+        return activations.detach().float().to(device)
     path = Path(activations)
     if path.is_dir():
         return torch.cat(list(iter_activation_dir(path, device=device)), dim=0).float()

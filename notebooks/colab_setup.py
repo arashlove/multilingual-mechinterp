@@ -1,21 +1,21 @@
 """Colab / local bootstrap for multilingual-mechinterp notebooks.
 
-Expected Google Drive layout (copy the whole project folder)::
+Expected Google Drive layout::
 
-    MyDrive/multilingual-mechinterp/
-      dist/*.whl          # built wheels (and deps if you vendor them)
-      data/               # culture JSON, activations, …
+    MyDrive/multilingual_mech/
+      data/
+        all200questions_persianMiddleEastCulture.json   # 200 culture MCQs
+      dist/
+        *.whl                                           # wheel builds (install all here)
       configs/
       notebooks/
-      results/
+      output/                                           # notebook exports (auto-created)
 
 Usage in a notebook (first code cell)::
 
     from pathlib import Path
     import runpy
-    setup = runpy.run_path(str(Path("colab_setup.py")))  # if cwd is notebooks/
-    # or:
-    # setup = runpy.run_path("/content/drive/MyDrive/multilingual-mechinterp/notebooks/colab_setup.py")
+    setup = runpy.run_path(str(Path("colab_setup.py")))
     globals().update({k: setup[k] for k in setup["EXPORTS"]})
 """
 
@@ -30,8 +30,8 @@ from pathlib import Path
 # EDIT THESE for your Colab run
 # ---------------------------------------------------------------------------
 
-# Folder name (or absolute path) under Google Drive
-DRIVE_FOLDER_NAME = "multilingual-mechinterp"
+# Folder name under Google Drive (MyDrive/multilingual_mech)
+DRIVE_FOLDER_NAME = "multilingual_mech"
 DRIVE_SEARCH_ROOTS = (
     Path("/content/drive/MyDrive"),
     Path("/content/drive/MyDrive/Documents"),
@@ -39,27 +39,32 @@ DRIVE_SEARCH_ROOTS = (
 )
 
 # Swappable HF model — change this one line to switch later (e.g. Gemma)
-MODEL_NAME = "Qwen/Qwen2.5-1.5B"  # later: "google/gemma-2-2b" / "google/gemma-2-9b"
+MODEL_NAME = "google/gemma-2-9b"  # later: "Qwen/Qwen2.5-1.5B", "google/gemma-2-2b" / "google/gemma-2-9b"
 MODEL_DTYPE = "auto"  # "bfloat16" | "float16" | "float32" | "auto"
-MODEL_TRUST_REMOTE_CODE = True  # Qwen often needs this; Gemma usually False
+MODEL_TRUST_REMOTE_CODE = False  # Qwen often needs this; Gemma usually False
 HF_TOKEN_ENV = "HF_TOKEN"  # optional gated models
 
 USE_TINY_OFFLINE = False  # True → skip HF download, use TinyCausalLM / TinyDecoder demos
 INSTALL_WHEELS = True
 MOUNT_DRIVE = True
 
+# Subfolders created under output/
+OUTPUT_SUBDIRS = ("sae", "jlens", "patching", "comparison", "figures", "checkpoints")
+
 EXPORTS = (
     "ROOT",
     "DATA_DIR",
     "DIST_DIR",
     "CONFIG_DIR",
-    "RESULTS_DIR",
+    "OUTPUT_DIR",
+    "RESULTS_DIR",  # alias of OUTPUT_DIR (notebooks use either name)
     "MODEL_NAME",
     "MODEL_DTYPE",
     "USE_TINY_OFFLINE",
     "IN_COLAB",
     "load_experiment_model",
     "culture_json_path",
+    "output_path",
 )
 
 
@@ -83,7 +88,7 @@ def _mount_drive() -> None:
 
 
 def _find_project_root() -> Path:
-    """Locate repo root: cwd, parent, or Drive search."""
+    """Locate project root: cwd, parent, or Drive folder ``multilingual_mech``."""
     cwd = Path.cwd().resolve()
     for candidate in (cwd, cwd.parent):
         if (candidate / "src" / "multilingual_mechinterp").exists() or (candidate / "pyproject.toml").exists():
@@ -93,7 +98,6 @@ def _find_project_root() -> Path:
 
     if _in_colab():
         _mount_drive()
-        # Absolute path override
         env = os.environ.get("MMI_PROJECT_ROOT")
         if env:
             p = Path(env)
@@ -110,13 +114,13 @@ def _find_project_root() -> Path:
             direct = root / name
             if direct.exists():
                 return direct
-            # shallow search
             matches = list(root.glob(f"**/{name}"))
             for m in matches:
-                if m.is_dir() and ((m / "data").exists() or (m / "dist").exists() or (m / "notebooks").exists()):
+                if m.is_dir() and (
+                    (m / "data").exists() or (m / "dist").exists() or (m / "notebooks").exists()
+                ):
                     return m
 
-    # Fall back to repo-ish cwd
     return cwd if (cwd / "notebooks").exists() else cwd.parent
 
 
@@ -140,7 +144,6 @@ def _pip_install_wheels(dist_dir: Path) -> None:
     subprocess.check_call(
         [sys.executable, "-m", "pip", "install", "--upgrade", *[str(w) for w in wheels], "-q"]
     )
-    # common notebook extras
     subprocess.check_call([sys.executable, "-m", "pip", "install", "matplotlib", "-q"])
 
 
@@ -171,19 +174,28 @@ def culture_json_path() -> Path:
     return DATA_DIR / "all200questions_persianMiddleEastCulture.json"
 
 
+def output_path(*parts: str) -> Path:
+    """Build a path under Drive ``output/`` and create parent dirs."""
+    path = OUTPUT_DIR.joinpath(*parts)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 # ---- run on import / runpy ----
 IN_COLAB = _in_colab()
 ROOT = _find_project_root()
 DATA_DIR = ROOT / "data"
 DIST_DIR = ROOT / "dist"
 CONFIG_DIR = ROOT / "configs"
-RESULTS_DIR = ROOT / "results"
+OUTPUT_DIR = ROOT / "output"
+RESULTS_DIR = OUTPUT_DIR  # notebooks historically used RESULTS_DIR
 
 if str(ROOT / "src") not in sys.path and (ROOT / "src").exists():
     sys.path.insert(0, str(ROOT / "src"))
 
 print(f"[colab_setup] IN_COLAB={IN_COLAB}")
 print(f"[colab_setup] ROOT={ROOT}")
+print(f"[colab_setup] OUTPUT_DIR={OUTPUT_DIR}")
 print(f"[colab_setup] MODEL_NAME={MODEL_NAME}  USE_TINY_OFFLINE={USE_TINY_OFFLINE}")
 
 if DIST_DIR.exists() or (ROOT / "pyproject.toml").exists():
@@ -192,9 +204,9 @@ if DIST_DIR.exists() or (ROOT / "pyproject.toml").exists():
     except subprocess.CalledProcessError as exc:
         print(f"[colab_setup] wheel install failed: {exc}")
 
-RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-for sub in ("sae", "jlens", "patching", "comparison"):
-    (RESULTS_DIR / sub).mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+for sub in OUTPUT_SUBDIRS:
+    (OUTPUT_DIR / sub).mkdir(parents=True, exist_ok=True)
 
 if not culture_json_path().exists():
     print(f"[colab_setup] WARNING: culture JSON not found at {culture_json_path()}")

@@ -4,25 +4,32 @@ Mechanistic interpretability toolkit for **multilingual** LLMs — Sparse Autoen
 
 ## Install
 
-### Local (Poetry)
+### Local (uv)
 
 ```bash
-poetry install
+uv sync
+# or: uv pip install -e ".[dev]"
 ```
 
-### Colab / pip (editable)
+Activate the venv (optional — prefer `uv run`):
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+### Colab / Drive wheels
+
+Prefer installing wheels from Drive `dist/` via the notebook setup cell. Editable fallback:
 
 ```python
-!git clone https://github.com/arashlove/multilingual-mechinterp.git
-%cd multilingual-mechinterp
 !pip install -e .
 ```
 
 Or with the lock-free requirements file:
 
 ```bash
-pip install -r requirements.txt
-pip install -e .
+uv pip install -r requirements.txt
+uv pip install -e .
 ```
 
 ## Quick start
@@ -128,13 +135,17 @@ tests/                         # unit tests
 
 ### Colab (Google Drive + wheels)
 
-1. Copy the project folder to Drive, including built wheels and data:
+1. Copy the project to Drive as **`multilingual_mech`** (include wheels + data):
 
 ```text
-MyDrive/multilingual-mechinterp/
-  dist/*.whl
-  data/all200questions_persianMiddleEastCulture.json
-  configs/  notebooks/  results/
+MyDrive/multilingual_mech/
+  data/
+    all200questions_persianMiddleEastCulture.json   # 200 culture questions
+  dist/
+    *.whl                                           # your wheel builds (e.g. 2 wheels)
+  configs/
+  notebooks/
+  output/                                           # auto-created; all exports go here
 ```
 
 2. Build wheels locally once (then upload `dist/`):
@@ -146,9 +157,10 @@ python -m build --wheel --outdir dist
 
 3. In Colab, open a notebook and run the first cell. It will:
    - mount Drive
-   - locate `multilingual-mechinterp/`
+   - locate `MyDrive/multilingual_mech/`
    - `pip install` wheels from `dist/`
    - point `DATA_DIR` at Drive data
+   - set **`OUTPUT_DIR`** → `multilingual_mech/output/` (plots, JSON, checkpoints)
    - set **`MODEL_NAME`** (default `Qwen/Qwen2.5-1.5B`)
 
 Swap models later by editing `notebooks/colab_setup.py` or overriding in the notebook:
@@ -163,8 +175,9 @@ Set `USE_TINY_OFFLINE = True` in `colab_setup.py` for demos without downloading 
 ## Development
 
 ```bash
-poetry run pytest
-poetry run ruff check src tests
+uv run pytest
+uv run ruff check src tests
+uv build --out-dir dist
 ```
 
 ## License
