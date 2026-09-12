@@ -39,9 +39,9 @@ DRIVE_SEARCH_ROOTS = (
 )
 
 # Swappable HF model — change this one line to switch later (e.g. Gemma)
-MODEL_NAME = "google/gemma-2-9b"  # later: "Qwen/Qwen2.5-1.5B", "google/gemma-2-2b" / "google/gemma-2-9b"
+MODEL_NAME = "Qwen/Qwen2.5-32B"  # later: "Qwen/Qwen2.5-32B, Qwen/Qwen2.5-1.5B", "google/gemma-2-2b" / "google/gemma-2-9b"
 MODEL_DTYPE = "auto"  # "bfloat16" | "float16" | "float32" | "auto"
-MODEL_TRUST_REMOTE_CODE = False  # Qwen often needs this; Gemma usually False
+MODEL_TRUST_REMOTE_CODE = True  # Qwen often needs this; Gemma usually False
 HF_TOKEN_ENV = "HF_TOKEN"  # optional gated models
 
 USE_TINY_OFFLINE = False  # True → skip HF download, use TinyCausalLM / TinyDecoder demos
