@@ -1,0 +1,58 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Secrets / env
+.env
+.env.*
+!.env.example
+
+# Local model caches & large artefacts
+*.pt
+*.bin
+*.safetensors
+.cache/
+huggingface/
+
+# Results (keep directory structure via .gitkeep)
+results/**/*
+!results/**/.gitkeep
+
+# Processed data (keep directory structure via .gitkeep)
+data/processed/**/*
+!data/processed/**/.gitkeep
+!data/prompts/**

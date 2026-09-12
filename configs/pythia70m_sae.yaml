@@ -1,0 +1,28 @@
+# Phase 0/1 defaults — Cunningham et al. SAE on Pythia-70M
+model:
+  name: EleutherAI/pythia-70m-deduped
+  dtype: float32
+  device: cpu  # set to cuda when available
+
+data:
+  dataset: NeelNanda/pile-10k
+  text_column: text
+  n_texts: 256
+  max_length: 128
+  layer: 1
+  location: residual
+  activations_dir: data/processed/activations/layer_1
+
+sae:
+  ratio: 2
+  # paper Table-1-ish alpha; also sweep nearby values
+  alpha: 0.00086
+  alphas: [1.0e-4, 3.0e-4, 8.6e-4, 1.4e-3, 3.0e-3]
+  lr: 0.001
+  batch_size: 512
+  n_epochs: 1
+  top_k: 10
+
+results:
+  root: results/sae
+  l1_sweep: results/sae/l1_sweep

@@ -1,0 +1,11 @@
+# Convenience install for Colab / pip users.
+# Prefer: pip install -e .
+# Or with Poetry: poetry install
+
+torch>=2.1.0
+transformers>=4.40.0
+numpy>=1.24.0
+pyyaml>=6.0
+tqdm>=4.66.0
+einops>=0.7.0
+datasets>=2.14.0

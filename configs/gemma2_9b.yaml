@@ -1,0 +1,31 @@
+# Gemma 2 9B experiment defaults
+model:
+  name: google/gemma-2-9b
+  dtype: bfloat16
+  device: cuda
+
+sae:
+  layer: 20
+  d_model: 3584
+  d_sae: 16384
+  top_k: 20
+  checkpoint: null
+
+jlens:
+  # focus mid-to-late layers for Gemma-2-9B (42 layers)
+  layers: [10, 20, 30, 41]
+  top_k: 10
+
+patching:
+  layers: null
+  metric: default
+
+data:
+  prompts_path: data/prompts/examples.json
+
+results:
+  root: results
+  sae: results/sae
+  jlens: results/jlens
+  patching: results/patching
+  comparison: results/comparison

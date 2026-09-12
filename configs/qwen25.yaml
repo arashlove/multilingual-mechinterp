@@ -1,0 +1,37 @@
+# Default experiment model for Colab / notebooks (swap freely)
+model:
+  name: Qwen/Qwen2.5-1.5B
+  # Later alternatives:
+  # name: Qwen/Qwen2.5-7B
+  # name: google/gemma-2-2b
+  # name: google/gemma-2-9b
+  dtype: auto
+  device: cuda
+  trust_remote_code: true
+
+data:
+  culture_json: data/all200questions_persianMiddleEastCulture.json
+  prompts_path: data/prompts/examples.json
+
+sae:
+  layer: null  # null → mid-depth
+  ratio: 2
+  alpha: 0.00086
+  alphas: [1.0e-4, 3.0e-4, 8.6e-4, 1.4e-3, 3.0e-3]
+  lr: 0.001
+  batch_size: 512
+  n_epochs: 1
+  top_k: 10
+
+jlens:
+  layers: null
+  top_k: 8
+  skip_first: 16
+
+patching:
+  window: null
+  source_pos: -1
+  target_pos: -1
+
+results:
+  root: results
