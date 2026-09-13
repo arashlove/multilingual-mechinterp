@@ -38,11 +38,9 @@ DRIVE_SEARCH_ROOTS = (
     Path("/content/drive/MyDrive/GitHub"),
 )
 
-# Swappable model — HF id OR local path (RunPod ModelScope cache under /workspace)
-# Local 7B (ready): /workspace/models/models/Qwen--Qwen2.5-7B
-# Local 32B (when download finishes): /workspace/models/models/Qwen--Qwen2.5-32B
-# Hub examples: "Qwen/Qwen2.5-32B", "google/gemma-2-9b"
-MODEL_NAME = "/workspace/models/models/Qwen--Qwen2.5-7B"
+# Swappable model — HF id OR local path under /workspace (must contain config.json).
+# After S3 sync: aws s3 sync s3://.../Qwen2.5-32B/ /workspace/models/Qwen2.5-32B/
+MODEL_NAME = "/workspace/models/Qwen2.5-32B"
 MODEL_DTYPE = "auto"  # "bfloat16" | "float16" | "float32" | "auto"
 MODEL_TRUST_REMOTE_CODE = True  # Qwen often needs this; Gemma usually False
 HF_TOKEN_ENV = "HF_TOKEN"  # optional gated models (not needed for local paths)
