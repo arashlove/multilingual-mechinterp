@@ -39,9 +39,8 @@ DRIVE_SEARCH_ROOTS = (
 )
 
 # Swappable model — HF id OR local path (must contain config.json).
-# On pod root disk (not network volume) when /workspace quota is tight:
-MODEL_NAME = "/root/models/Qwen2.5-32B"
-# If you synced elsewhere, override to that folder, e.g. "/models/Qwen2.5-32B"
+# Pod root-disk path (not network volume):
+MODEL_NAME = "/models/Qwen2.5-32B"
 MODEL_DTYPE = "auto"  # "bfloat16" | "float16" | "float32" | "auto"
 MODEL_TRUST_REMOTE_CODE = True  # Qwen often needs this; Gemma usually False
 HF_TOKEN_ENV = "HF_TOKEN"  # optional gated models (not needed for local paths)

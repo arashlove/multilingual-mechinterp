@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import torch
@@ -61,8 +62,28 @@ def load_model(
         device = "cuda" if torch.cuda.is_available() else "cpu"
     torch_device = torch.device(device)
 
+    # Absolute / existing paths must contain config.json; otherwise HF treats the
+    # string as a repo id and raises "Repo id must be in the form...".
+    local = Path(model_name)
+    is_local = local.is_absolute() or local.exists()
+    if is_local:
+        local = local.expanduser().resolve()
+        if not local.is_dir():
+            raise FileNotFoundError(
+                f"Local model path does not exist or is not a directory: {local}"
+            )
+        if not (local / "config.json").is_file():
+            raise FileNotFoundError(
+                f"No config.json in {local}. Point MODEL_NAME at the folder that "
+                "contains config.json (check find /root -name config.json)."
+            )
+        model_name = str(local)
+
     tok_kwargs: dict[str, Any] = {"trust_remote_code": trust_remote_code}
     model_kwargs: dict[str, Any] = {"trust_remote_code": trust_remote_code, **kwargs}
+    if is_local:
+        tok_kwargs.setdefault("local_files_only", True)
+        model_kwargs.setdefault("local_files_only", True)
     if token is not None:
         tok_kwargs["token"] = token
         model_kwargs["token"] = token
