@@ -38,9 +38,10 @@ DRIVE_SEARCH_ROOTS = (
     Path("/content/drive/MyDrive/GitHub"),
 )
 
-# Swappable model — HF id OR local path under /workspace (must contain config.json).
-# After S3 sync: aws s3 sync s3://.../Qwen2.5-32B/ /workspace/models/Qwen2.5-32B/
-MODEL_NAME = "/workspace/models/Qwen2.5-32B"
+# Swappable model — HF id OR local path (must contain config.json).
+# On pod root disk (not network volume) when /workspace quota is tight:
+MODEL_NAME = "/root/models/Qwen2.5-32B"
+# If you synced elsewhere, override to that folder, e.g. "/models/Qwen2.5-32B"
 MODEL_DTYPE = "auto"  # "bfloat16" | "float16" | "float32" | "auto"
 MODEL_TRUST_REMOTE_CODE = True  # Qwen often needs this; Gemma usually False
 HF_TOKEN_ENV = "HF_TOKEN"  # optional gated models (not needed for local paths)
