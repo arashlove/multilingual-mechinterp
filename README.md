@@ -148,10 +148,10 @@ MyDrive/multilingual_mech/
   output/                                           # auto-created; all exports go here
 ```
 
-2. Build the wheel locally with Poetry (then upload `dist/`):
+2. Build the wheel locally with uv (then upload `dist/`):
 
 ```bash
-poetry build
+uv build --out-dir dist
 # → dist/multilingual_mechinterp-*.whl
 ```
 
@@ -177,7 +177,7 @@ Set `USE_TINY_OFFLINE = True` in `colab_setup.py` for demos without downloading 
 ```bash
 uv run pytest
 uv run ruff check src tests
-poetry build
+uv build --out-dir dist
 ```
 
 ## License
