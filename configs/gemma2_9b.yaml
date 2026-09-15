@@ -1,32 +1,44 @@
-# Gemma 2 9B experiment defaults
+# Gemma 2 9B experiment defaults (Phase 1 subject model)
 model:
-  name: google/gemma-2-9b
+  name: google/gemma-2-9b   # on RunPod use local path via colab_setup: /models/gemma-2-9b
   dtype: bfloat16
   device: cuda
+  trust_remote_code: false
+
+data:
+  culture_json: data/all200questions_persianMiddleEastCulture.json
+  prompts_path: data/prompts/examples.json
 
 sae:
-  layer: 20
+  layer: 20                 # mid-ish for 42-layer Gemma 2 9B; null → n_layers // 2
+  ratio: 2
+  alpha: 0.00086
+  alphas: [1.0e-4, 3.0e-4, 8.6e-4, 1.4e-3, 3.0e-3]
+  lr: 0.001
+  batch_size: 512
+  n_epochs: 1
+  top_k: 10
   d_model: 3584
   d_sae: 16384
-  top_k: 20
   checkpoint: null
 
 jlens:
-  # last 7 layers before final (faster fit on 9B/32B)
-  # resolved in notebook as range(n_layers-8, n_layers-1)
+  # last 7 layers before final (faster fit on 9B)
   n_source_layers: 7
   top_k: 10
+  layers: null
+  skip_first: 16
 
 patching:
   layers: null
-  metric: default
-
-data:
-  prompts_path: data/prompts/examples.json
+  window: null
+  source_pos: -1
+  target_pos: -1
+  metric: margin
 
 results:
-  root: results
-  sae: results/sae
-  jlens: results/jlens
-  patching: results/patching
-  comparison: results/comparison
+  root: output
+  sae: output/sae
+  jlens: output/jlens
+  patching: output/patching
+  comparison: output/comparison
