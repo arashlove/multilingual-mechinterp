@@ -186,7 +186,7 @@ In `Full_mechanistic_interp.ipynb` cell **2.5**:
 ```python
 AUTOINTERP_BACKEND = "hf"                 # local Qwen labels
 AUTOINTERP_MODEL = "/models/Qwen2.5-32B"   # uses *-Instruct if that folder exists
-UNLOAD_SUBJECT_FOR_AUTOINTERP = True      # move Gemma to CPU while Qwen runs
+UNLOAD_SUBJECT_FOR_AUTOINTERP = False      # 140GB: keep Gemma loaded; set True if OOM
 ```
 
 Flow: Gemma extracts max-activating snippets → Qwen proposes labels → Gemma returns to GPU for Parts 3–6.  
