@@ -179,19 +179,19 @@ m = load_model("/models/gemma-2-9b", trust_remote_code=False)
 print(m.n_layers, m.device)
 ```
 
-### Autointerp with Qwen 32B (later cell / separate kernel)
+### Autointerp with Qwen 32B (§2.5)
 
-After SAE max-activating snippets are saved (`output/sae/autointerp_top_features.json`):
-
-1. Free Gemma from GPU (`del model`; `torch.cuda.empty_cache()`), or restart kernel and **don’t** reload Gemma.
-2. Load Qwen only for labeling:
+In `Full_mechanistic_interp.ipynb` cell **2.5**:
 
 ```python
-labeler = load_model("/models/Qwen2.5-32B", trust_remote_code=True)
-# then generate short labels from snippets (or set AUTOINTERP_BACKEND in the notebook)
+AUTOINTERP_BACKEND = "hf"                 # local Qwen labels
+AUTOINTERP_MODEL = "/models/Qwen2.5-32B"   # uses *-Instruct if that folder exists
+UNLOAD_SUBJECT_FOR_AUTOINTERP = True      # move Gemma to CPU while Qwen runs
 ```
 
-Prefer **Instruct** weights if that prefix exists on S3 (`Qwen2.5-32B-Instruct`).
+Flow: Gemma extracts max-activating snippets → Qwen proposes labels → Gemma returns to GPU for Parts 3–6.  
+Gemma-only run: set `AUTOINTERP_BACKEND = "manual"` (skip Qwen download).  
+Pull Qwen from S3 before that cell if you want labels.
 
 ---
 

@@ -155,9 +155,11 @@ def sweep_l1(
             ckpt = output_dir / f"tied_sae_alpha_{alpha:.2e}.pt"
             result.sae.save(ckpt)
             ckpt_path = str(ckpt)
+        # Keep the trained SAE in memory for notebooks when disk checkpoints are off.
         row = {
             "alpha": float(alpha),
             "checkpoint": ckpt_path,
+            "sae": result.sae.cpu(),
             **metrics,
             "final_loss": result.history[-1]["loss"] if result.history else None,
         }
@@ -165,13 +167,14 @@ def sweep_l1(
         print(
             f"alpha={alpha:.2e}  FVU={metrics['fvu']:.4f}  "
             f"mean_l0={metrics['mean_l0']:.2f}  dead={metrics['dead_features']}  "
-            f"-> {ckpt_path or 'metrics-only'}"
+            f"-> {ckpt_path or 'metrics-only (in-memory sae)'}"
         )
 
-    save_json(rows, output_dir / "sweep_metrics.json")
+    json_rows = [{k: v for k, v in r.items() if k != "sae"} for r in rows]
+    save_json(json_rows, output_dir / "sweep_metrics.json")
     if save_learned_dicts and save_checkpoints:
         torch.save(
-            [(r["alpha"], TiedSAE.load(r["checkpoint"])) for r in rows if r["checkpoint"]],
+            [(r["alpha"], r["sae"]) for r in rows],
             output_dir / "learned_dicts.pt",
         )
     return rows
