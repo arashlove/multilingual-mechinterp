@@ -1,6 +1,6 @@
 [project]
 name = "multilingual-mechinterp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Mechanistic interpretability toolkit for multilingual LLM analysis (SAE, JLens, activation patching)."
 readme = "README.md"
 license = { text = "MIT" }

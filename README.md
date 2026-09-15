@@ -148,11 +148,11 @@ MyDrive/multilingual_mech/
   output/                                           # auto-created; all exports go here
 ```
 
-2. Build wheels locally once (then upload `dist/`):
+2. Build the wheel locally with Poetry (then upload `dist/`):
 
 ```bash
-pip install build
-python -m build --wheel --outdir dist
+poetry build
+# → dist/multilingual_mechinterp-*.whl
 ```
 
 3. In Colab, open a notebook and run the first cell. It will:
@@ -177,7 +177,7 @@ Set `USE_TINY_OFFLINE = True` in `colab_setup.py` for demos without downloading 
 ```bash
 uv run pytest
 uv run ruff check src tests
-uv build --out-dir dist
+poetry build
 ```
 
 ## License

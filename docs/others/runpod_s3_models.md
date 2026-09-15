@@ -114,17 +114,66 @@ find /models -name config.json 2>/dev/null
 
 ---
 
-## 6. Clone the repo and install
+## 6. Build the package wheel with Poetry (on your PC) + install on the pod
+
+The notebook’s `colab_setup` prefers `dist/*.whl` if present; otherwise it falls back to editable install.  
+**Build with Poetry only** (from the repo root on your PC):
+
+```powershell
+poetry build
+# → dist/multilingual_mechinterp-0.1.1-py3-none-any.whl
+#    dist/multilingual_mechinterp-0.1.1.tar.gz
+
+Get-ChildItem dist\*.whl
+```
+
+Bump `version` in `pyproject.toml` (and `__version__` in `src/multilingual_mechinterp/__init__.py`) before rebuilding so `pip install --upgrade` picks up the new wheel.
+
+**Replace old wheels** in `dist/` before syncing — an outdated `.whl` causes errors like:
+
+```text
+cannot import name 'score_mcq_prompt' from 'multilingual_mechinterp.data'
+(.../dist-packages/multilingual_mechinterp/...)
+```
+
+### Clone / update repo on the pod
 
 ```bash
 cd /workspace
 git clone https://github.com/arashlove/multilingual-mechinterp.git
 # or: cd multilingual-mechinterp && git pull
 cd /workspace/multilingual-mechinterp
-pip install -U pip
-pip install dist/*.whl
-# fallback after local package edits: pip install -e .
 ```
+
+### Copy the new wheel onto the pod
+
+From PC (SSH over TCP — use your pod IP/port):
+
+```powershell
+scp -P <PORT> "dist\multilingual_mechinterp-0.1.1-py3-none-any.whl" `
+  root@<POD_IP>:/workspace/multilingual-mechinterp/dist/
+```
+
+Or commit/push `dist/*.whl` and `git pull` on the pod.
+
+### Install on the pod
+
+```bash
+cd /workspace/multilingual-mechinterp
+pip install -U pip
+pip uninstall -y multilingual-mechinterp
+pip install --upgrade dist/*.whl
+
+# verify (should import; path may be under dist-packages — that’s OK if the wheel is fresh)
+python - <<'PY'
+from multilingual_mechinterp.data import score_mcq_prompt
+import multilingual_mechinterp.data as d
+print("ok", d.__file__)
+PY
+```
+
+**Fallback** (no wheel): `pip install -e .` — installs from `src/` without writing a `.whl`.  
+After any install, **restart the Jupyter kernel** before running the notebook.
 
 ---
 
@@ -178,6 +227,7 @@ Prefer **Instruct** weights if that prefix exists on S3 (`Qwen2.5-32B-Instruct`)
 |------|-----------|
 | Both prefixes on S3 | `s5cmd ls` shows `gemma-2-9b/` and `Qwen2.5-32B/` |
 | Pod pull | `/models/gemma-2-9b/config.json` and `/models/Qwen2.5-32B/config.json` |
+| Fresh wheel | `poetry build` on PC → `pip install --upgrade dist/*.whl` on pod; `score_mcq_prompt` imports |
 | Subject setup | `MODEL_NAME = "/models/gemma-2-9b"` |
 | Notebook | Parts 1–6 run without Hub downloads |
 | Autointerp | Qwen loaded separately; labels in `autointerp_top_features.json` |
