@@ -114,65 +114,49 @@ find /models -name config.json 2>/dev/null
 
 ---
 
-## 6. Build the package wheel with uv (on your PC) + install on the pod
+## 6. Build + push the wheel **before** deploying the pod
 
-The notebook’s `colab_setup` prefers `dist/*.whl` if present; otherwise it falls back to editable install.  
-**Build with uv** (from the repo root on your PC):
+**Do this on your PC every time package code changes, before you create/start a pod (or before `git pull` on an existing pod).**  
+The wheel lives in GitHub under `dist/`; the notebook’s `colab_setup` installs `dist/*.whl` automatically — no manual `pip install` / `scp` needed on the pod.
+
+### On your PC (required first)
 
 ```powershell
+# from repo root
+# 1) bump version in pyproject.toml + src/multilingual_mechinterp/__init__.py (e.g. 0.1.0 → 0.1.1)
 uv build --out-dir dist
 # → dist/multilingual_mechinterp-0.1.1-py3-none-any.whl
 
+# 2) remove older wheels so only the new one is in dist/
 Get-ChildItem dist\*.whl
+
+# 3) commit and push (include dist/*.whl)
+git add dist/*.whl pyproject.toml src/multilingual_mechinterp/__init__.py
+git commit -m "Build wheel 0.1.1 for RunPod notebook install"
+git push
 ```
 
-Bump `version` in `pyproject.toml` (and `__version__` in `src/multilingual_mechinterp/__init__.py`) before rebuilding so `pip install --upgrade` picks up the new wheel.
-
-**Replace old wheels** in `dist/` before syncing — an outdated `.whl` causes errors like:
+An outdated `dist/*.whl` on GitHub causes errors like:
 
 ```text
 cannot import name 'score_mcq_prompt' from 'multilingual_mechinterp.data'
 (.../dist-packages/multilingual_mechinterp/...)
 ```
 
-### Clone / update repo on the pod
+### Then on the pod (after models are pulled)
 
 ```bash
 cd /workspace
 git clone https://github.com/arashlove/multilingual-mechinterp.git
-# or: cd multilingual-mechinterp && git pull
+# existing checkout: cd multilingual-mechinterp && git pull
 cd /workspace/multilingual-mechinterp
+ls dist/*.whl   # confirm the version you just pushed
 ```
 
-### Copy the new wheel onto the pod
+Open `notebooks/Full_mechanistic_interp.ipynb` → **restart kernel** → run the first cell.  
+`colab_setup` installs the wheel from `dist/`.
 
-From PC (SSH over TCP — use your pod IP/port):
-
-```powershell
-scp -P <PORT> "dist\multilingual_mechinterp-0.1.1-py3-none-any.whl" `
-  root@<POD_IP>:/workspace/multilingual-mechinterp/dist/
-```
-
-Or commit/push `dist/*.whl` and `git pull` on the pod.
-
-### Install on the pod
-
-```bash
-cd /workspace/multilingual-mechinterp
-pip install -U pip
-pip uninstall -y multilingual-mechinterp
-pip install --upgrade dist/*.whl
-
-# verify (should import; path may be under dist-packages — that’s OK if the wheel is fresh)
-python - <<'PY'
-from multilingual_mechinterp.data import score_mcq_prompt
-import multilingual_mechinterp.data as d
-print("ok", d.__file__)
-PY
-```
-
-**Fallback** (no wheel): `pip install -e .` — installs from `src/` without writing a `.whl`.  
-After any install, **restart the Jupyter kernel** before running the notebook.
+**Fallback only** if there is no wheel: `pip install -e .`
 
 ---
 
@@ -224,11 +208,12 @@ Prefer **Instruct** weights if that prefix exists on S3 (`Qwen2.5-32B-Instruct`)
 
 | Step | Done when |
 |------|-----------|
+| Fresh wheel on GitHub | `uv build` + push `dist/*.whl` **before** deploying / before pod `git pull` |
 | Both prefixes on S3 | `s5cmd ls` shows `gemma-2-9b/` and `Qwen2.5-32B/` |
 | Pod pull | `/models/gemma-2-9b/config.json` and `/models/Qwen2.5-32B/config.json` |
-| Fresh wheel | `uv build --out-dir dist` on PC → `pip install --upgrade dist/*.whl` on pod; `score_mcq_prompt` imports |
+| Repo on pod | `git clone` / `git pull`; `ls dist/*.whl` shows the pushed version |
 | Subject setup | `MODEL_NAME = "/models/gemma-2-9b"` |
-| Notebook | Parts 1–6 run without Hub downloads |
+| Notebook | First cell installs wheel; Parts 1–6 run without Hub downloads |
 | Autointerp | Qwen loaded separately; labels in `autointerp_top_features.json` |
 
 **Idle tip:** **Stop** the GPU pod when idle; keep the network volume for `/workspace`. Re-pull `/models` from S3 after terminate if root disk was wiped.
