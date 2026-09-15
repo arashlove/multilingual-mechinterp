@@ -100,13 +100,18 @@ def culture_prompt_pairs(
     target_lang: str = "persian",
     limit: int = 5,
     path: str | Path | None = None,
-) -> list[dict[str, str]]:
-    """Convenience: list of dicts for notebooks / ``analyze``."""
+) -> list[dict[str, Any]]:
+    """Convenience: list of dicts for notebooks / ``analyze``.
+
+    Each dict includes ``correct_index`` (0-based) and ``correct_letter`` (``A``–``D``)
+    for MCQ next-token scoring.
+    """
     if items is None:
         items = load_culture_questions(path, limit=limit)
-    out = []
+    out: list[dict[str, Any]] = []
     for item in items[:limit]:
         src, tgt, src_ans, tgt_ans = item.parallel_prompts(source_lang, target_lang)
+        letter = chr(ord("A") + int(item.correct_index))
         out.append(
             {
                 "id": str(item.question_number),
@@ -116,6 +121,8 @@ def culture_prompt_pairs(
                 "target_prompt": tgt,
                 "source_answer": src_ans,
                 "target_answer": tgt_ans,
+                "correct_index": int(item.correct_index),
+                "correct_letter": letter,
             }
         )
     return out

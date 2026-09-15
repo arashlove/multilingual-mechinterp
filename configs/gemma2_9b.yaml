@@ -12,8 +12,9 @@ sae:
   checkpoint: null
 
 jlens:
-  # focus mid-to-late layers for Gemma-2-9B (42 layers)
-  layers: [10, 20, 30, 41]
+  # last 7 layers before final (faster fit on 9B/32B)
+  # resolved in notebook as range(n_layers-8, n_layers-1)
+  n_source_layers: 7
   top_k: 10
 
 patching:

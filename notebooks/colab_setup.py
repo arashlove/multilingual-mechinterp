@@ -39,11 +39,13 @@ DRIVE_SEARCH_ROOTS = (
 )
 
 # Swappable model — HF id OR local path (must contain config.json).
-# Pod root-disk path (not network volume):
-MODEL_NAME = "/models/Qwen2.5-32B"
+# Phase 1 subject model (SAE / JLens / patching). Prefer local S3 pull on RunPod:
+MODEL_NAME = "/models/gemma-2-9b"
+# Hub fallback (gated): MODEL_NAME = "google/gemma-2-9b"  + HF_TOKEN
+# Autointerp labeler is separate: /models/Qwen2.5-32B (load after Gemma, see docs/others/runpod_s3_models.md)
 MODEL_DTYPE = "auto"  # "bfloat16" | "float16" | "float32" | "auto"
-MODEL_TRUST_REMOTE_CODE = True  # Qwen often needs this; Gemma usually False
-HF_TOKEN_ENV = "HF_TOKEN"  # optional gated models (not needed for local paths)
+MODEL_TRUST_REMOTE_CODE = False  # Qwen often needs True; Gemma usually False
+HF_TOKEN_ENV = "HF_TOKEN"  # only if loading gated Hub id, not local path
 
 USE_TINY_OFFLINE = False  # True → skip HF download, use TinyCausalLM / TinyDecoder demos
 INSTALL_WHEELS = True

@@ -6,14 +6,26 @@ from multilingual_mechinterp.data.culture import (
     load_culture_questions,
 )
 from multilingual_mechinterp.data.loader import load_prompt_file, load_prompts
+from multilingual_mechinterp.data.mcq import (
+    correct_letter,
+    margin_from_probs,
+    option_token_ids,
+    score_mcq_prompt,
+    score_options_from_logits,
+)
 from multilingual_mechinterp.data.prompts import PromptPair, default_prompts
 
 __all__ = [
     "CultureItem",
     "PromptPair",
+    "correct_letter",
     "culture_prompt_pairs",
     "default_prompts",
     "load_culture_questions",
     "load_prompt_file",
     "load_prompts",
+    "margin_from_probs",
+    "option_token_ids",
+    "score_mcq_prompt",
+    "score_options_from_logits",
 ]

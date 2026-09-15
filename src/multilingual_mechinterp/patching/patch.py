@@ -40,37 +40,27 @@ def run_patching(
     window: int | None = None,
     layers: list[int] | None = None,
     device: str | None = None,
-    metric: Any = None,
+    metric: str | Any = "prob",
+    option_letters: Sequence[str] | None = None,
 ) -> PatchResult:
-    """Patch source residuals into the target run and score ΔP(answer) by layer.
-
-    This is the real intervention loop from ``docs/activation_patching_reimpl/``:
-    cache source activations → overwrite target residuals in a start-layer
-    window sweep → read next-token probs.
+    """Patch source residuals into the target run and score by layer.
 
     Parameters
     ----------
     answer:
-        Answer string(s) or precomputed token id(s) whose probability mass is
-        the metric. Defaults to the first token of ``source_prompt``'s last word
-        when omitted (smoke-test convenience only).
-    target_pos / source_pos:
-        Relative token indices (``-1`` = last real token). Object patching uses
-        a more specific negative index for the object span.
-    window:
-        Number of consecutive layers to patch from each start (``None`` = through top).
-    layers:
-        If set, only those start layers appear in ``scores`` (still runs full sweep
-        unless you pass a custom path later).
+        Answer string(s) or token id(s). For culture MCQs prefer the correct
+        **option letter** (``\"C\"``), not the answer text (``\"Divan-e Hafez\"``).
     metric:
-        Ignored (kept for API compatibility with the old residual-diff stub).
+        ``\"prob\"`` (default): ΔP(answer).
+        ``\"margin\"``: Δ(logit_correct − max logit_wrong) over A–D (or
+        ``option_letters``). Requires ``answer`` to be the correct letter.
+    option_letters:
+        Letters used for margin scoring (default ``ABCD``).
     """
-    del metric
     if not isinstance(model, LoadedModel) and not hasattr(model, "tokenizer"):
         raise ValueError("model must be a LoadedModel (or expose .tokenizer)")
 
     if answer is None:
-        # Weak default: last whitespace-separated token of the source string
         approx = source_prompt.strip().split()[-1] if source_prompt.strip() else "a"
         answer = approx
 
@@ -79,6 +69,76 @@ def run_patching(
         y_ids = [int(x) for x in answer]  # type: ignore[arg-type]
     else:
         y_ids = answer_token_ids(tokenizer, answer)  # type: ignore[arg-type]
+
+    metric_name = metric if isinstance(metric, str) else "prob"
+
+    if metric_name == "margin":
+        from multilingual_mechinterp.data.mcq import (
+            margin_from_probs,
+            option_token_ids,
+        )
+
+        letters = list(option_letters) if option_letters is not None else list("ABCD")
+        opt_map = option_token_ids(tokenizer, letters)
+        opt_ids = [opt_map[L] for L in letters]
+        # correct letter must be in answer / y_ids
+        correct_id = y_ids[0]
+        curve = causal_effect_curve(
+            model,
+            source_prompt,
+            target_prompt,
+            y_ids,
+            source_pos=source_pos,
+            target_pos=target_pos,
+            window=window,
+            device=device,
+        )
+        # Re-score from full vocab probs → margin
+        probs = curve["probs"]  # [B, n_layers, V]
+        # baseline from unpatched: reconstruct via first patched? use dedicated forward
+        # causal_effect_curve baseline is P(answer); recompute margins
+        B, nL, V = probs.shape
+        patched_m = torch.stack(
+            [
+                margin_from_probs(probs[:, L, :], correct_id=correct_id, option_ids=opt_ids)
+                for L in range(nL)
+            ],
+            dim=1,
+        )  # [B, nL]
+
+        # baseline margin: run target once
+        from multilingual_mechinterp.data.mcq import score_mcq_prompt
+
+        base_info = score_mcq_prompt(
+            model, target_prompt, correct_letter=str(answer).strip()[0].upper(), device=device
+        )
+        baseline = float(base_info["margin"])
+        effect = patched_m - baseline
+        best = int(effect[0].argmax().item())
+        layer_ids = list(range(nL))
+        if layers is not None:
+            layer_ids = [L for L in layers if 0 <= L < nL]
+        scores = {L: float(effect[0, L].item()) for L in layer_ids}
+        patched_probs = {L: float(patched_m[0, L].item()) for L in layer_ids}
+        return PatchResult(
+            source_prompt=source_prompt,
+            target_prompt=target_prompt,
+            layers=layer_ids,
+            scores=scores,
+            baseline_score=baseline,
+            best_layer=best,
+            patched_probs=patched_probs,
+            metadata={
+                "model": getattr(model, "name", type(model).__name__),
+                "answer_ids": y_ids,
+                "metric": "margin",
+                "option_ids": opt_map,
+                "baseline_mcq": base_info,
+                "window": window,
+                "source_pos": source_pos,
+                "target_pos": target_pos,
+            },
+        )
 
     curve = causal_effect_curve(
         model,
@@ -114,6 +174,7 @@ def run_patching(
         metadata={
             "model": getattr(model, "name", type(model).__name__),
             "answer_ids": y_ids,
+            "metric": "prob",
             "window": window,
             "source_pos": source_pos,
             "target_pos": target_pos,

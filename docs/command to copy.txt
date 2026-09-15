@@ -1,4 +1,0 @@
-rsync -avP --partial \
-  /mnt/e/models/Qwen2.5-32B \
-  root@HOST:/workspace/models/ \
-  -e "ssh -p PORT"

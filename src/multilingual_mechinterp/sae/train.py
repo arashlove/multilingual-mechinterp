@@ -124,8 +124,15 @@ def sweep_l1(
     batch_size: int = 512,
     n_epochs: int = 1,
     device: str = "cpu",
+    save_checkpoints: bool = True,
+    save_learned_dicts: bool = False,
 ) -> list[dict[str, Any]]:
-    """Train tied SAEs across L1 coefficients and save checkpoints + metrics."""
+    """Train tied SAEs across L1 coefficients and save metrics (+ optional weights).
+
+    By default writes ``sweep_metrics.json`` and one ``.pt`` per alpha. Set
+    ``save_checkpoints=False`` to keep only metrics (figures/numbers workflow).
+    ``learned_dicts.pt`` is off by default — it duplicated every checkpoint.
+    """
     from multilingual_mechinterp.metrics.sae import evaluate_sae
 
     acts = _as_tensor(activations, device="cpu")
@@ -143,22 +150,30 @@ def sweep_l1(
             device=device,
         )
         metrics = evaluate_sae(result.sae, acts[: min(5000, acts.shape[0])])
-        ckpt = output_dir / f"tied_sae_alpha_{alpha:.2e}.pt"
-        result.sae.save(ckpt)
+        ckpt_path: str | None = None
+        if save_checkpoints:
+            ckpt = output_dir / f"tied_sae_alpha_{alpha:.2e}.pt"
+            result.sae.save(ckpt)
+            ckpt_path = str(ckpt)
         row = {
             "alpha": float(alpha),
-            "checkpoint": str(ckpt),
+            "checkpoint": ckpt_path,
             **metrics,
             "final_loss": result.history[-1]["loss"] if result.history else None,
         }
         rows.append(row)
         print(
             f"alpha={alpha:.2e}  FVU={metrics['fvu']:.4f}  "
-            f"mean_l0={metrics['mean_l0']:.2f}  dead={metrics['dead_features']}  -> {ckpt}"
+            f"mean_l0={metrics['mean_l0']:.2f}  dead={metrics['dead_features']}  "
+            f"-> {ckpt_path or 'metrics-only'}"
         )
 
     save_json(rows, output_dir / "sweep_metrics.json")
-    torch.save([(r["alpha"], TiedSAE.load(r["checkpoint"])) for r in rows], output_dir / "learned_dicts.pt")
+    if save_learned_dicts and save_checkpoints:
+        torch.save(
+            [(r["alpha"], TiedSAE.load(r["checkpoint"])) for r in rows if r["checkpoint"]],
+            output_dir / "learned_dicts.pt",
+        )
     return rows
 
 
