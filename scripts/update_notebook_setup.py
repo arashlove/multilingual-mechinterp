@@ -1,4 +1,4 @@
-"""Rewrite notebook setup cells to use notebooks/colab_setup.py."""
+"""Rewrite notebook setup cells to use notebooks/runpod_setup.py."""
 from __future__ import annotations
 
 import json
@@ -13,7 +13,7 @@ SETUP_SOURCE = r'''# Drive layout expected:
 #     dist/*.whl   (wheel builds)
 #     configs/  notebooks/  output/
 #
-# Edit MODEL_NAME in notebooks/colab_setup.py (Qwen2.5 now; Gemma later),
+# Edit MODEL_NAME in notebooks/runpod_setup.py (Qwen2.5 now; Gemma later),
 # or override below after bootstrap.
 
 from pathlib import Path
@@ -22,16 +22,17 @@ import runpy
 def _resolve_setup_script() -> Path:
     here = Path.cwd()
     candidates = [
-        here / "colab_setup.py",
-        here / "notebooks" / "colab_setup.py",
-        here.parent / "notebooks" / "colab_setup.py",
-        Path("/content/drive/MyDrive/multilingual_mech/notebooks/colab_setup.py"),
+        here / "runpod_setup.py",
+        here / "notebooks" / "runpod_setup.py",
+        here.parent / "notebooks" / "runpod_setup.py",
+        Path("/workspace/multilingual-mechinterp/notebooks/runpod_setup.py"),
+        Path("/content/drive/MyDrive/multilingual_mech/notebooks/runpod_setup.py"),
     ]
     for p in candidates:
         if p.exists():
             return p
     raise FileNotFoundError(
-        "colab_setup.py not found. Mount Drive and use folder multilingual_mech/, "
+        "runpod_setup.py not found. Mount Drive and use folder multilingual_mech/, "
         "or open the notebook from the repo."
     )
 
@@ -111,7 +112,7 @@ N_ITEMS = 5
 # Also add a "load model" markdown+cell after setup for HF notebooks guidance
 LOAD_MODEL_MD = (
     "## Load experiment model\n\n"
-    "Uses `MODEL_NAME` from `colab_setup.py` (default **Qwen2.5**). "
+    "Uses `MODEL_NAME` from `runpod_setup.py` (default **Qwen2.5**). "
     "Set `USE_TINY_OFFLINE=True` for demos without HF downloads.\n"
 )
 

@@ -148,10 +148,10 @@ MyDrive/multilingual_mech/
   output/                                           # auto-created; all exports go here
 ```
 
-2. Build the wheel locally with uv (then upload `dist/`):
+2. Build the wheel locally with Poetry (then upload `dist/`):
 
 ```bash
-uv build --out-dir dist
+poetry build
 # → dist/multilingual_mechinterp-*.whl
 ```
 
@@ -163,21 +163,21 @@ uv build --out-dir dist
    - set **`OUTPUT_DIR`** → `multilingual_mech/output/` (plots, JSON, checkpoints)
    - set **`MODEL_NAME`** (default `Qwen/Qwen2.5-1.5B`)
 
-Swap models later by editing `notebooks/colab_setup.py` or overriding in the notebook:
+Swap models later by editing `notebooks/runpod_setup.py` or overriding in the notebook:
 
 ```python
 MODEL_NAME = "google/gemma-2-2b"   # or Qwen/Qwen2.5-7B, etc.
 model = load_experiment_model(MODEL_NAME)
 ```
 
-Set `USE_TINY_OFFLINE = True` in `colab_setup.py` for demos without downloading HF weights.
+Set `USE_TINY_OFFLINE = True` in `runpod_setup.py` for demos without downloading HF weights.
 
 ## Development
 
 ```bash
 uv run pytest
 uv run ruff check src tests
-uv build --out-dir dist
+poetry build
 ```
 
 ## License

@@ -1,21 +1,22 @@
-"""Colab / local bootstrap for multilingual-mechinterp notebooks.
+"""RunPod bootstrap for multilingual-mechinterp notebooks.
 
-Expected Google Drive layout::
+On the pod the repo lives at ``/workspace/multilingual-mechinterp``.
+Install the wheel first (see ``docs/others/runpod_setup.md``)::
 
-    MyDrive/multilingual_mech/
-      data/
-        all200questions_persianMiddleEastCulture.json   # 200 culture MCQs
-      dist/
-        *.whl                                           # wheel builds (install all here)
-      configs/
-      notebooks/
-      output/                                           # notebook exports (auto-created)
+    pip install --upgrade dist/multilingual_mechinterp-*.whl
 
-Usage in a notebook (first code cell)::
+This module still installs ``dist/*.whl`` when a notebook loads it, so a
+kernel restart picks up the wheel that was pushed with the repo.
+
+Weights stay outside the repo::
+
+    /models/gemma-2-9b/config.json
+
+Usage in a notebook::
 
     from pathlib import Path
     import runpy
-    setup = runpy.run_path(str(Path("colab_setup.py")))
+    setup = runpy.run_path(str(Path("notebooks/runpod_setup.py")))
     globals().update({k: setup[k] for k in setup["EXPORTS"]})
 """
 
@@ -27,7 +28,7 @@ import sys
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# EDIT THESE for your Colab run
+# EDIT THESE for your RunPod run
 # ---------------------------------------------------------------------------
 
 # Folder name under Google Drive (MyDrive/multilingual_mech)
@@ -132,7 +133,7 @@ def _pip_install_wheels(dist_dir: Path) -> None:
         return
     wheels = sorted(dist_dir.glob("*.whl"))
     if not wheels:
-        print(f"[colab_setup] No wheels in {dist_dir} — trying editable / requirements.")
+        print(f"[runpod_setup] No wheels in {dist_dir} — trying editable / requirements.")
         req = ROOT / "requirements.txt"
         pyproject = ROOT / "pyproject.toml"
         if (ROOT / "src").exists() and pyproject.exists():
@@ -143,7 +144,7 @@ def _pip_install_wheels(dist_dir: Path) -> None:
                 sys.path.insert(0, str(ROOT / "src"))
         return
 
-    print(f"[colab_setup] Installing {len(wheels)} wheel(s) from {dist_dir}")
+    print(f"[runpod_setup] Installing {len(wheels)} wheel(s) from {dist_dir}")
     subprocess.check_call(
         [sys.executable, "-m", "pip", "install", "--upgrade", *[str(w) for w in wheels], "-q"]
     )
@@ -156,7 +157,7 @@ def load_experiment_model(model_name: str | None = None, **kwargs):
     if USE_TINY_OFFLINE:
         from multilingual_mechinterp.patching import TinyCausalLM
 
-        print("[colab_setup] USE_TINY_OFFLINE=True → TinyCausalLM")
+        print("[runpod_setup] USE_TINY_OFFLINE=True → TinyCausalLM")
         return TinyCausalLM()
 
     from multilingual_mechinterp.models import load_model
@@ -169,7 +170,7 @@ def load_experiment_model(model_name: str | None = None, **kwargs):
     }
     if token:
         load_kwargs["token"] = token
-    print(f"[colab_setup] Loading model: {name}")
+    print(f"[runpod_setup] Loading model: {name}")
     return load_model(name, **load_kwargs)
 
 
@@ -196,22 +197,22 @@ RESULTS_DIR = OUTPUT_DIR  # notebooks historically used RESULTS_DIR
 if str(ROOT / "src") not in sys.path and (ROOT / "src").exists():
     sys.path.insert(0, str(ROOT / "src"))
 
-print(f"[colab_setup] IN_COLAB={IN_COLAB}")
-print(f"[colab_setup] ROOT={ROOT}")
-print(f"[colab_setup] OUTPUT_DIR={OUTPUT_DIR}")
-print(f"[colab_setup] MODEL_NAME={MODEL_NAME}  USE_TINY_OFFLINE={USE_TINY_OFFLINE}")
+print(f"[runpod_setup] IN_COLAB={IN_COLAB}")
+print(f"[runpod_setup] ROOT={ROOT}")
+print(f"[runpod_setup] OUTPUT_DIR={OUTPUT_DIR}")
+print(f"[runpod_setup] MODEL_NAME={MODEL_NAME}  USE_TINY_OFFLINE={USE_TINY_OFFLINE}")
 
 if DIST_DIR.exists() or (ROOT / "pyproject.toml").exists():
     try:
         _pip_install_wheels(DIST_DIR)
     except subprocess.CalledProcessError as exc:
-        print(f"[colab_setup] wheel install failed: {exc}")
+        print(f"[runpod_setup] wheel install failed: {exc}")
 
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 for sub in OUTPUT_SUBDIRS:
     (OUTPUT_DIR / sub).mkdir(parents=True, exist_ok=True)
 
 if not culture_json_path().exists():
-    print(f"[colab_setup] WARNING: culture JSON not found at {culture_json_path()}")
+    print(f"[runpod_setup] WARNING: culture JSON not found at {culture_json_path()}")
 else:
-    print(f"[colab_setup] culture data OK: {culture_json_path()}")
+    print(f"[runpod_setup] culture data OK: {culture_json_path()}")

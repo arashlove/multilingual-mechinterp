@@ -114,55 +114,15 @@ find /models -name config.json 2>/dev/null
 
 ---
 
-## 6. Build + push the wheel **before** deploying the pod
+## 6. Build the wheel and install it on the pod
 
-**Do this on your PC every time package code changes, before you create/start a pod (or before `git pull` on an existing pod).**  
-The wheel lives in GitHub under `dist/`; the notebook’s `colab_setup` installs `dist/*.whl` automatically — no manual `pip install` / `scp` needed on the pod.
-
-### On your PC (required first)
-
-```powershell
-# from repo root
-# 1) bump version in pyproject.toml + src/multilingual_mechinterp/__init__.py (e.g. 0.1.0 → 0.1.1)
-uv build --out-dir dist
-# → dist/multilingual_mechinterp-0.1.1-py3-none-any.whl
-
-# 2) remove older wheels so only the new one is in dist/
-Get-ChildItem dist\*.whl
-
-# 3) commit and push (include dist/*.whl)
-git add dist/*.whl pyproject.toml src/multilingual_mechinterp/__init__.py
-git commit -m "Build wheel 0.1.1 for RunPod notebook install"
-git push
-```
-
-An outdated `dist/*.whl` on GitHub causes errors like:
-
-```text
-cannot import name 'score_mcq_prompt' from 'multilingual_mechinterp.data'
-(.../dist-packages/multilingual_mechinterp/...)
-```
-
-### Then on the pod (after models are pulled)
-
-```bash
-cd /workspace
-git clone https://github.com/arashlove/multilingual-mechinterp.git
-# existing checkout: cd multilingual-mechinterp && git pull
-cd /workspace/multilingual-mechinterp
-ls dist/*.whl   # confirm the version you just pushed
-```
-
-Open `notebooks/Full_mechanistic_interp.ipynb` → **restart kernel** → run the first cell.  
-`colab_setup` installs the wheel from `dist/`.
-
-**Fallback only** if there is no wheel: `pip install -e .`
+Follow [runpod_setup.md](runpod_setup.md). Short form: on your PC, bump the version, `poetry build`, and push `dist/*.whl`. On the pod, `git pull`, then `pip install --upgrade dist/multilingual_mechinterp-*.whl`.
 
 ---
 
-## 7. Point `colab_setup` at **Gemma** (subject)
+## 7. Point `runpod_setup` at **Gemma** (subject)
 
-In `notebooks/colab_setup.py`:
+In `notebooks/runpod_setup.py`:
 
 ```python
 MODEL_NAME = "/models/gemma-2-9b"
@@ -208,12 +168,12 @@ Pull Qwen from S3 before that cell if you want labels.
 
 | Step | Done when |
 |------|-----------|
-| Fresh wheel on GitHub | `uv build` + push `dist/*.whl` **before** deploying / before pod `git pull` |
+| Fresh wheel on GitHub | `poetry build` + push `dist/*.whl` **before** deploying / before pod `git pull` |
 | Both prefixes on S3 | `s5cmd ls` shows `gemma-2-9b/` and `Qwen2.5-32B/` |
 | Pod pull | `/models/gemma-2-9b/config.json` and `/models/Qwen2.5-32B/config.json` |
 | Repo on pod | `git clone` / `git pull`; `ls dist/*.whl` shows the pushed version |
-| Subject setup | `MODEL_NAME = "/models/gemma-2-9b"` |
-| Notebook | First cell installs wheel; Parts 1–6 run without Hub downloads |
+| Subject setup | `MODEL_NAME = "/models/gemma-2-9b"` in `notebooks/runpod_setup.py` |
+| Notebook | `pip install` the wheel from `dist/`, then run the notebook |
 | Autointerp | Qwen loaded separately; labels in `autointerp_top_features.json` |
 
 **Idle tip:** **Stop** the GPU pod when idle; keep the network volume for `/workspace`. Re-pull `/models` from S3 after terminate if root disk was wiped.
