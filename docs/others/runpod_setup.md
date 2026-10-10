@@ -25,9 +25,43 @@ Commit and push the wheel, the version files, `notebooks/runpod_setup.py`, and `
 
 ## 2. On the pod — pull Gemma 2 9B
 
-Container disk is wiped when the pod is terminated. Pull the weights again after that. A stop/start of the same pod keeps `/models` only if the container disk survived; if `config.json` is missing, run this again.
+Download from Hugging Face first. Use the S3 copy only after Hub returns HTTP 429 or another rate-limit error. Both commands write the same folder, `/models/gemma-2-9b`, which is what `notebooks/runpod_setup.py` loads. That folder is on the pod disk and is wiped when the pod is terminated, so the next pod downloads again.
+
+### Hugging Face (default)
+
+Gemma 2 9B is gated. Accept the license at [google/gemma-2-9b](https://huggingface.co/google/gemma-2-9b) before the download. The weights are free to download. Hub limits how many file requests an account can make, not how many times you may download the model. Published file-resolver caps are about 3,000 requests per 5 minutes anonymous, 5,000 on a free account, and 12,000 on Pro. Those caps change, and a shared RunPod IP can still be throttled sooner. A normal Placement run that downloads Gemma a few times stays inside them.
+
+| | Hugging Face | S3 bucket |
+| --- | --- | --- |
+| Weight download | Free | Outbound transfer can be charged on every pull |
+| Account | Required for this gated model | Not required for the public `s5cmd` read |
+| Pod path | `/models/gemma-2-9b` | `/models/gemma-2-9b` |
+| When to use | First | After a Hub rate limit |
 
 ```bash
+pip install -U huggingface_hub
+hf auth login
+mkdir -p /models/gemma-2-9b
+hf download google/gemma-2-9b --local-dir /models/gemma-2-9b
+ls /models/gemma-2-9b/config.json
+```
+
+`hf auth login` asks for a read token in the pod terminal. Do not put that token in the notebook or the git repo.
+
+Pin the Hub revision so a later file change on the model page does not move the checkpoint under you. Copy the commit hash from the model page and pass it:
+
+```bash
+hf download google/gemma-2-9b \
+  --revision <commit-from-the-model-page> \
+  --local-dir /models/gemma-2-9b
+```
+
+Record that hash in the run notes. If the files are already in the local Hub cache, the download reuses them.
+
+### S3 (after a Hub rate limit)
+
+```bash
+pip install -U s5cmd
 mkdir -p /models/gemma-2-9b
 s5cmd --no-sign-request cp \
   's3://arash-llm-models-790189127408-ap-southeast-2-an/gemma-2-9b/*' \
@@ -58,4 +92,4 @@ The print must match the version you just pushed (`0.1.3` until you bump it). If
 3. Notes and figures are written to `output/placement_1/`.
 4. Stop the GPU pod when the run finishes. The GPU keeps billing while the pod is up.
 
-A community L40 (48 GB) at $0.69/hr fits Gemma 2 9B plus the Jacobian stage. There is no pod on the account until you start one.
+For this placement, download Gemma from Hugging Face, run SAE, Jacobian Lens, and activation patching on an A100 80 GB, and keep trained SAE weights, figures, and `output/placement_1/` as the research record. A community L40 (48 GB) at $0.69/hr also fits the same run. There is no pod on the account until you start one. The GPU and the pod disk bill while the pod is up. Hub downloads of the weights stay free until a rate limit.
