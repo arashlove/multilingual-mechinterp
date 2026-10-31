@@ -60,3 +60,8 @@ output/**/*
 data/processed/**/*
 !data/processed/**/.gitkeep
 !data/prompts/**
+
+# Placement 2 raw human data (licensed release, never committed)
+data/placement_2/raw/**
+!data/placement_2/raw/.gitkeep
+data_raw_output/

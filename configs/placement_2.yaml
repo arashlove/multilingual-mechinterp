@@ -1,0 +1,95 @@
+# Placement 2: Moral Machine STAY/SWERVE benchmark on base Gemma 2 9B.
+# Values set to `approval_required` (and model.revision: null) block a final
+# scientific run until the researcher signs them off in RESEARCH_DECISIONS.md.
+run:
+  name: placement_2_majority_v2
+  seed: 0
+  output_root: output/placement_2
+  require_reviewed_data: true
+  require_approved_reference_policy: true
+  cache: true
+
+human:
+  source_manifest: data/placement_2/inputs/human_source.yaml
+  country_culture_map: data/placement_2/inputs/country_culture_map.csv
+  language_reference_map: data/placement_2/inputs/language_reference_map.csv
+  raw_processing:
+    paired_outcome_format: moral_machine_2018_sharedresponses
+    stream_source: true
+    output_format: parquet
+    require_two_valid_outcomes: true
+    completed_session_unique_orders: 13
+    eligible_country_completed_users_gt: 100
+  primary_reference_aggregation: approval_required  # equal_country_vote | pooled_respondents
+  secondary_aggregation: [equal_country_vote, pooled_respondents]
+  scenario_match_policy: exact_structured_match
+  allow_proxy_for_primary_majority: false
+  min_matched_responses_per_culture: approval_required
+  near_tie_warning_fraction: 0.05  # warning only, not a no-label threshold
+
+inputs:
+  questions_en: data/placement_2/inputs/moral_machine_en_v6_1.jsonl
+  questions_fa: data/placement_2/inputs/moral_machine_fa_v6_1.jsonl  # supplied by the researcher
+  human_references: data/placement_2/processed/moral_machine_40_human_references_by_cluster.csv
+  concepts: data/placement_2/inputs/concepts.json  # status must be "approved" for concept scores
+  jlens_calibration: data/placement_2/inputs/jlens_calibration.jsonl  # optional; default is the Placement 1 culture MCQs
+
+model:
+  model_id: google/gemma-2-9b
+  revision: null  # freeze the resolved full commit hash before inference
+  local_path: /models/gemma-2-9b
+  dtype: float32
+  device: cuda
+  batch_size: 1
+  max_prompt_tokens: 256
+
+choices:
+  labels: [STAY, SWERVE]
+  method: full_sequence_conditional_logprob
+  prefix_policy: explicit_and_identical_across_languages
+  answer_prefix: "\n\nAnswer:"  # appended to every prompt in every language
+  continuation_separator: " "  # scored continuation is separator + label
+  include_termination: false
+  length_normalization: none
+  presentation_orders: [STAY_first, SWERVE_first]
+
+behavior:
+  jsd_log_base: 2
+  languages: [en, fa]
+  baseline_language: en
+  high_jsd_threshold: 0.05
+  high_p_difference_threshold: 0.10
+  bootstrap_samples: 2000
+
+selection:
+  cases_per_group: 4  # D1, D2, B1, B2 -> up to 16 cases
+  groups: [D1, D2, B1, B2]
+  intervention_cases: 8
+
+jlens:
+  source_layers: [22, 26, 30, 38]
+  candidate_source_layers: [22, 26, 30, 38]
+  alternative_early_control_layers: [18, 22, 26, 38]
+  target_layer: 41
+  fit_prompts_min: 20
+  holdout_prompts_min: 4
+  repeat_fit: true
+  dimension_batch: 32
+  max_fit_tokens: 128
+  skip_first_tokens: 16
+  top_k_raw: 50
+  top_k_filtered: 8
+  position: last_prompt_non_padding_token
+  save_checkpoints: true
+
+interventions:
+  method: jacobian_backprojected_concept
+  baseline_method: placement1_token_embedding
+  relative_residual_norm_strengths: [-0.05, -0.03, -0.01, 0.0, 0.01, 0.03, 0.05]
+  controls: [zero_strength, random_same_norm, unrelated_concept, template_token]
+  min_cases: 3
+  only_approved_concepts: true
+
+reporting:
+  output_format: [json, csv, png, md]
+  retain_lens_checkpoints: true

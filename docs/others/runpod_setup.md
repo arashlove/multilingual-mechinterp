@@ -2,7 +2,7 @@
 
 Build the package on your PC, push it, then install that wheel on the pod and open the notebook. Model weights stay at `/models/gemma-2-9b` and are not part of the wheel.
 
-Current package version: **0.1.3** (`pyproject.toml` and `src/multilingual_mechinterp/__init__.py`).
+Current package version: **0.1.4** (`pyproject.toml` and `src/multilingual_mechinterp/__init__.py`).
 
 `notebooks/runpod_setup.py` points the notebooks at `/models/gemma-2-9b`. Do not change that path on the pod.
 
@@ -14,7 +14,7 @@ From the repo root in PowerShell. Bump both version strings first whenever `src/
 # 1. Delete older builds so dist/ holds one wheel.
 Get-ChildItem dist\multilingual_mechinterp-* | Remove-Item -Force
 
-# 2. Build into dist/. Writes dist\multilingual_mechinterp-0.1.3-py3-none-any.whl
+# 2. Build into dist/. Writes dist\multilingual_mechinterp-0.1.4-py3-none-any.whl
 poetry build
 
 # 3. Confirm one wheel.
@@ -83,7 +83,7 @@ python -m pip install --upgrade dist/multilingual_mechinterp-*.whl
 python -c "import multilingual_mechinterp as m; print(m.__version__)"
 ```
 
-The print must match the version you just pushed (`0.1.3` until you bump it). If `dist/` has more than one wheel, delete the old ones on your PC, rebuild, push, pull, and install again.
+The print must match the version you just pushed (`0.1.4` until you bump it). If `dist/` has more than one wheel, delete the old ones on your PC, rebuild, push, pull, and install again.
 
 ## 4. Run Placement 1
 

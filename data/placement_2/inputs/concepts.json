@@ -1,0 +1,68 @@
+{
+  "status": "draft",
+  "status_note": "Set status to \"approved\" after a Persian speaker checks the fa lists. Words that are not a single token in the Gemma tokenizer are dropped and listed in the JLens records.",
+  "level_to_family": {
+    "Less": "Less",
+    "More": "More",
+    "Male": "Male",
+    "Female": "Female",
+    "Fat": "Fat",
+    "Fit": "Fit",
+    "Old": "Old",
+    "Young": "Young",
+    "Pets": "Pets",
+    "Hoomans": "Hoomans"
+  },
+  "unrelated_family": "unrelated_control",
+  "template_family": "template_control",
+  "families": {
+    "Less": {
+      "en": ["one", "two", "three", "four", "fewer", "few"],
+      "fa": ["یک", "دو", "سه", "چهار", "کمتر"]
+    },
+    "More": {
+      "en": ["five", "more", "many"],
+      "fa": ["پنج", "بیشتر"]
+    },
+    "Male": {
+      "en": ["man", "men", "male"],
+      "fa": ["مرد", "مردان"]
+    },
+    "Female": {
+      "en": ["woman", "women", "female"],
+      "fa": ["زن", "زنان"]
+    },
+    "Fat": {
+      "en": ["larger", "large", "overweight", "heavy", "bodied"],
+      "fa": ["چاق", "تنومند", "درشت"]
+    },
+    "Fit": {
+      "en": ["athlete", "athletes", "athletic", "fit"],
+      "fa": ["ورزشکار", "ورزشکاران", "ورزیده"]
+    },
+    "Old": {
+      "en": ["older", "old", "elderly", "senior"],
+      "fa": ["سالمند", "سالمندان", "پیر", "مسن"]
+    },
+    "Young": {
+      "en": ["child", "children", "boy", "girl", "kid", "young"],
+      "fa": ["کودک", "کودکان", "بچه", "پسر", "دختر"]
+    },
+    "Pets": {
+      "en": ["dog", "dogs", "cat", "cats", "pet", "pets", "animal"],
+      "fa": ["سگ", "گربه", "حیوان", "حیوانات"]
+    },
+    "Hoomans": {
+      "en": ["human", "humans", "person", "people"],
+      "fa": ["انسان", "آدم", "فرد"]
+    },
+    "unrelated_control": {
+      "en": ["weather", "table", "river", "music", "mountain", "paper"],
+      "fa": ["هوا", "میز", "رودخانه", "موسیقی", "کوه", "کاغذ"]
+    },
+    "template_control": {
+      "en": ["Answer", "Respond", "Option"],
+      "fa": ["پاسخ", "گزینه"]
+    }
+  }
+}
