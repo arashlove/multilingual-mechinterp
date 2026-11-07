@@ -1,6 +1,6 @@
 {
-  "status": "draft",
-  "status_note": "Set status to \"approved\" after a Persian speaker checks the fa lists. Words that are not a single token in the Gemma tokenizer are dropped and listed in the JLens records.",
+  "status": "approved",
+  "status_note": "Approved by the researcher for the v2 run (2026-11-07). Words that are not a single token in the Gemma tokenizer are dropped; the v2 notebook writes a per-family coverage table (records/concept_coverage.csv).",
   "level_to_family": {
     "Less": "Less",
     "More": "More",

@@ -171,6 +171,21 @@ def environment_info() -> dict[str, Any]:
     return info
 
 
+def local_commit(local: str | Path) -> str | None:
+    """Hub commit of a ``huggingface-cli download --local-dir`` folder, read from the
+    download metadata it leaves in ``.cache/huggingface/download`` (or from a cache
+    ``snapshots/<commit>`` path). None when neither is present."""
+    local = Path(local)
+    if local.parent.name == "snapshots":
+        return local.name
+    meta_dir = local / ".cache" / "huggingface" / "download"
+    for meta in sorted(meta_dir.glob("*.metadata")) if meta_dir.is_dir() else []:
+        lines = meta.read_text(encoding="utf-8", errors="ignore").splitlines()
+        if lines and len(lines[0].strip()) == 40:
+            return lines[0].strip()
+    return None
+
+
 def model_identity(cfg: dict[str, Any]) -> dict[str, Any]:
     model = cfg.get("model", {})
     identity: dict[str, Any] = {
@@ -178,10 +193,12 @@ def model_identity(cfg: dict[str, Any]) -> dict[str, Any]:
         "revision": model.get("revision"),
         "local_path": model.get("local_path"),
         "dtype": model.get("dtype"),
+        "local_commit": None,
         "local_snapshot": None,
     }
     local = Path(model["local_path"]) if model.get("local_path") else None
     if local is not None and local.is_dir():
+        identity["local_commit"] = local_commit(local)
         identity["local_snapshot"] = {
             name: sha256_file(local / name)
             for name in MODEL_SNAPSHOT_FILES

@@ -1,0 +1,81 @@
+# Placement 2, v2 run (notebooks/placement_2_v2.ipynb).
+# Adds the instruction-tuned model, neutral A/B labels, generated answers, mirrored-pair
+# metadata, dilemma-domain JLens calibration and wider interventions on chosen cases.
+# Sized for about 20-25 minutes of A100 time (not yet measured). There are no time
+# limits: to shorten the run, reduce jlens.fit_prompts_max, the cases, or the
+# intervention layers, directions and strengths.
+run:
+  name: placement_2_v2
+  seed: 0
+  output_root: output/placement_2_v2
+
+human:
+  near_tie_warning_fraction: 0.05
+  primary_reference_aggregation: approval_required  # equal_country_vote | pooled_respondents
+
+inputs:
+  questions_en: data/placement_2/inputs/moral_machine_en_v6_2.jsonl  # v6_1 text + counterbalance_pair_id
+  questions_fa: data/placement_2/inputs/moral_machine_fa_v6_2.jsonl
+  human_references: data/placement_2/processed/moral_machine_40_human_references_by_cluster.csv
+  concepts: data/placement_2/inputs/concepts.json
+  jlens_calibration: data/placement_2/inputs/jlens_calibration.jsonl  # count-substituted study templates
+  v1_scores: output/placement_2_v1/records/scores.json  # optional; base-model reproducibility check
+
+model:
+  model_id: google/gemma-2-9b
+  revision: null  # the notebook records the local commit hash when the download metadata exists
+  local_path: /models/gemma-2-9b
+  dtype: float32
+
+instruct_model:
+  model_id: google/gemma-2-9b-it
+  revision: null
+  local_path: /models/gemma-2-9b-it
+  dtype: float32
+  chat_template: true
+  generation_max_new_tokens: 6
+
+numerics:
+  allow_tf32: true  # TF32 matmuls on Ampere/Hopper; float32 weights and activations
+
+choices:
+  labels: [STAY, SWERVE]
+  answer_prefix: "\n\nAnswer:"  # base model only; the instruct model gets the chat template
+  continuation_separator: " "
+  presentation_orders: [STAY_first, SWERVE_first]
+  neutral_labels: [A, B]
+  neutral_mappings: [A_is_STAY, A_is_SWERVE]
+  neutral_orders: [A_first, B_first]
+
+behavior:
+  languages: [en, fa]
+  high_jsd_threshold: 0.05
+  high_p_difference_threshold: 0.10
+  bootstrap_samples: 2000
+
+cases:
+  # Chosen from the v1 run: the two exact mirrored pairs (UTILITARIAN_005/006, 007/008);
+  # AGE_006/AGE_005 and GENDER_002 from the presentation chart, where the human clusters
+  # split (the Eastern share sparing the target is below 50% on AGE_006 and GENDER_002);
+  # FITNESS_007, the largest English-Persian gap in v1 (p(SWERVE) 0.728 vs 0.563).
+  readout: [UTILITARIAN_005, UTILITARIAN_006, UTILITARIAN_007, UTILITARIAN_008,
+            AGE_006, AGE_005, GENDER_002, FITNESS_007]
+  intervention: [UTILITARIAN_005, UTILITARIAN_006, AGE_006, FITNESS_007]
+
+jlens:
+  source_layers: [22, 26, 30, 38]
+  target_layer: 41
+  fit_prompts_max: 12  # two halves of up to 6, fitted alternately and merged
+  holdout_prompts: 4
+  dimension_batch: 32
+  max_fit_tokens: 128
+  skip_first_tokens: 16
+  top_k_raw: 50
+  top_k_filtered: 8
+
+interventions:
+  layers: [26, 38]
+  directions: [jacobian_swap, embedding_swap, jacobian_stay_kills, jacobian_swerve_kills,
+               random_same_norm, unrelated_concept, template_token]
+  relative_residual_norm_strengths: [-0.4, -0.2, 0.2, 0.4]
+  orders: [STAY_first, SWERVE_first]

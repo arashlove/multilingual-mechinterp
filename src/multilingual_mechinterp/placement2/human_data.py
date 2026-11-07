@@ -604,6 +604,64 @@ def user_repeat_check(sides: pd.DataFrame, questions: list[dict]) -> pd.DataFram
     return pd.DataFrame(rows)
 
 
+def respondent_level_uncertainty(
+    sides: pd.DataFrame, questions: list[dict], *, near_tie: float = 0.05, z: float = 1.96
+) -> pd.DataFrame:
+    """Per question and cluster: the STAY share with a respondent-clustered interval.
+
+    The Wilson interval treats every matched response as independent. Here responses are
+    grouped by ``UserID`` and the standard error is the cluster-robust (sandwich) one,
+    ``sqrt(G/(G-1) * sum_u (k_u - p n_u)^2) / N``, so a user who answered the same
+    configuration several times counts as one unit. ``design_effect`` is the variance
+    ratio to the binomial one (1 = no inflation). ``p_stay_user_weighted`` gives each
+    user equal weight. ``label_cluster_robust`` applies the same labelling rule as the
+    references to the clustered interval.
+    """
+    clusters = [c for c in CLUSTER_ORDER if c in set(sides.ClusterName_sk)]
+    rows = []
+    for q in questions:
+        matched = sides[match_mask(sides, match_criteria(q))]
+        groups = [(c, matched[matched.ClusterName_sk == c]) for c in clusters]
+        groups.append((ALL_CLUSTERS, matched))
+        for name, group in groups:
+            n = len(group)
+            entry = {"question_id": q["question_id"], "cluster": name, "n_responses": n}
+            if n == 0:
+                rows.append(entry)
+                continue
+            per_user = group.groupby("UserID_sk").chose_stay.agg(["sum", "size"])
+            k, users = int(per_user["sum"].sum()), len(per_user)
+            p = k / n
+            resid = per_user["sum"] - p * per_user["size"]
+            se_cluster = (math.sqrt(users / (users - 1) * float((resid ** 2).sum())) / n
+                          if users > 1 else math.nan)
+            se_binomial = math.sqrt(p * (1 - p) / n)
+            low, high = p - z * se_cluster, p + z * se_cluster
+            w_low, w_high = wilson_interval(k, n, z)
+            label, strength = majority_label(p, low, high, near_tie)
+            wilson_label, _ = majority_label(p, w_low, w_high, near_tie)
+            entry.update({
+                "n_users": users,
+                "max_responses_per_user": int(per_user["size"].max()),
+                "users_with_repeats": int((per_user["size"] > 1).sum()),
+                "p_stay": p,
+                "p_stay_user_weighted": float((per_user["sum"] / per_user["size"]).mean()),
+                "se_binomial": se_binomial,
+                "se_cluster_robust": se_cluster,
+                "design_effect": (se_cluster / se_binomial) ** 2 if se_binomial > 0 else math.nan,
+                "wilson_ci_low": w_low,
+                "wilson_ci_high": w_high,
+                "cluster_ci_low": low,
+                "cluster_ci_high": high,
+                "label_wilson": wilson_label,
+                "label_cluster_robust": label,
+                "strength_cluster_robust": strength,
+                "label_changes": label != wilson_label,
+            })
+            rows.append(entry)
+    return pd.DataFrame(rows)
+
+
 def country_type_preferences(questions_table: pd.DataFrame, country: str) -> pd.DataFrame:
     """Type-level preference for one country next to its cluster, with Wilson intervals."""
     clean = questions_table[questions_table.clean_contrast]

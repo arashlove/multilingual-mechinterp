@@ -115,6 +115,127 @@ def persian_template_rows(english: list[dict]) -> list[dict]:
     ]
 
 
+NEUTRAL_LABELS = ("A", "B")
+MAPPINGS = ("A_is_STAY", "A_is_SWERVE")
+NEUTRAL_ORDERS = ("A_first", "B_first")
+_ACTION_WORD = re.compile(r"(?<![A-Za-z])(STAY|SWERVE)(?![A-Za-z])")
+
+
+def neutral_prompt(prompt: str, mapping: str, order: str) -> str:
+    """The prompt with the action labels replaced by A and B.
+
+    ``mapping`` says which action is A. The option text is unchanged; only the label in
+    front of each option line, and the labels in the instruction line ("STAY or SWERVE"
+    becomes "A or B"), are replaced. ``order`` says whether the A line or the B line
+    comes first; the two lines keep their original positions in the prompt.
+    """
+    if mapping not in MAPPINGS:
+        raise ValueError(f"mapping must be one of {MAPPINGS}")
+    if order not in NEUTRAL_ORDERS:
+        raise ValueError(f"order must be one of {NEUTRAL_ORDERS}")
+    stay, swerve = option_lines(prompt)
+    lines = prompt.split("\n")
+    stay_label, swerve_label = ("A", "B") if mapping == "A_is_STAY" else ("B", "A")
+
+    def relabel(line: str, old: str, new: str) -> str:
+        body = line.lstrip()
+        return line[: len(line) - len(body)] + new + body[len(old):]
+
+    by_label = {stay_label: relabel(lines[stay], "STAY", stay_label),
+                swerve_label: relabel(lines[swerve], "SWERVE", swerve_label)}
+    first, second = sorted((stay, swerve))
+    lines[first], lines[second] = ((by_label["A"], by_label["B"]) if order == "A_first"
+                                   else (by_label["B"], by_label["A"]))
+    for i, line in enumerate(lines):
+        if i not in (first, second):
+            lines[i] = _ACTION_WORD.sub(lambda m: "A" if m.group(1) == "STAY" else "B", line)
+    out = "\n".join(lines)
+    if _ACTION_WORD.search(out):
+        raise ValueError("STAY/SWERVE still present after relabelling")
+    return out
+
+
+def build_neutral_variants(english: list[dict], persian: list[dict] | None, *, languages=("en", "fa"),
+                           mappings=MAPPINGS, orders=NEUTRAL_ORDERS) -> list[dict]:
+    """One row per question x language x label mapping x order, with A/B labels.
+
+    ``swerve_label`` is the label that stands for SWERVE; ``swerve_first`` says whether the
+    SWERVE option is listed first, so position effects can be compared with the
+    STAY/SWERVE prompts.
+    """
+    fa_by_id = {row["question_id"]: prompt_text(row, "fa") for row in persian or []}
+    rows = []
+    for q in english:
+        texts = {"en": prompt_text(q, "en"), "fa": fa_by_id.get(q["question_id"])}
+        for lang in languages:
+            if texts.get(lang) is None:
+                continue
+            for mapping in mappings:
+                swerve_label = "A" if mapping == "A_is_SWERVE" else "B"
+                for order in orders:
+                    rows.append({
+                        "question_id": q["question_id"],
+                        "language": lang,
+                        "mapping": mapping,
+                        "order": order,
+                        "swerve_label": swerve_label,
+                        "swerve_first": (order == "A_first") == (swerve_label == "A"),
+                        "prompt": neutral_prompt(texts[lang], mapping, order),
+                    })
+    return rows
+
+
+REVIEW_TERMS = {
+    "passenger": ("passenger", "inside the car", "car carries", "occupant"),
+    "pedestrian": ("pedestrian", "on the road", "roadway", "crossing"),
+    "signal": ("signal", "green", "red", "light"),
+    "casualty": ("kill", "die", "dead", "survive"),
+}
+
+
+def translation_review_rows(english: list[dict], persian: list[dict]) -> list[dict]:
+    """Side-by-side English and Persian text per question and part (scenario, STAY line,
+    SWERVE line, instruction), with the review topics each English part touches.
+    Reviewer columns are left empty for a bilingual reviewer to fill in."""
+    fa_by_id = {row["question_id"]: prompt_text(row, "fa") or "" for row in persian}
+
+    def parts(text: str) -> dict[str, str]:
+        lines = text.split("\n")
+        stay, swerve = option_lines(text)
+        first = min(stay, swerve)
+        last = max(stay, swerve)
+        return {
+            "scenario": "\n".join(lines[:first]).strip(),
+            "STAY line": lines[stay].strip(),
+            "SWERVE line": lines[swerve].strip(),
+            "instruction": "\n".join(lines[last + 1:]).strip(),
+        }
+
+    rows = []
+    for q in english:
+        en_parts = parts(prompt_text(q, "en"))
+        fa_text = fa_by_id.get(q["question_id"], "")
+        fa_parts = parts(fa_text) if fa_text else {}
+        for part, en in en_parts.items():
+            low = en.lower()
+            topics = [name for name, words in REVIEW_TERMS.items() if any(w in low for w in words)]
+            rows.append({
+                "question_id": q["question_id"],
+                "scenario_type": q.get("scenario_type"),
+                "layout": q.get("layout"),
+                "part": part,
+                "english": en,
+                "persian": fa_parts.get(part, ""),
+                "review_topics": ", ".join(topics),
+                "meaning_matches": "",
+                "issue": "",
+                "suggested_persian": "",
+                "reviewer": "",
+                "review_date": "",
+            })
+    return rows
+
+
 def build_variants(english: list[dict], persian: list[dict] | None, *, languages=("en", "fa"),
                    orders=ORDERS) -> list[dict]:
     """One row per question x language x presentation order."""
